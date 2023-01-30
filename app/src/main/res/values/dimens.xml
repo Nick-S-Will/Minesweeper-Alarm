@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="alarm_card_height">125dp</dimen>
+    <dimen name="alarm_card_radius">20dp</dimen>
+    <dimen name="alarm_card_content_padding">15dp</dimen>
+    <dimen name="alarm_name_text_size">10sp</dimen>
+    <dimen name="alarm_time_text_size">15sp</dimen>
+    <dimen name="alarm_card_spacing">5dp</dimen>
+</resources>

@@ -1,0 +1,34 @@
+<resources>
+    <string name="app_name">Minesweeper Alarm</string>
+    <!--Main activity-->
+    <string name="remaining_time_to_alarm">Alarm in %1$d hours %2$d minutes</string>
+    <string name="no_alarms">No upcoming alarms</string>
+    <string name="no_alarms_enabled">No alarms enabled</string>
+    <string name="add_alarm_description">Create New Alarm</string>
+    <string name="alarm_list_description">Alarm List</string>
+    <string name="alarm_delete_prompt_title">Delete Alarm</string>
+    <string name="alarm_delete_prompt_message">Do you want to delete %1$s?</string>
+    <string name="alarm_delete_prompt_positive">Delete</string>
+    <string name="alarm_delete_prompt_confirmed">%1$s successfully deleted</string>
+    <string name="alarm_edit_prompt">Edit Alarm</string>
+    <string name="play_text">Play Minesweeper</string>
+    <!--Alarm setup-->
+    <string name="alarm_name_input_hint">Enter Alarm Name</string>
+    <string name="cancel_button_text">Cancel</string>
+    <string name="save_button_text">Save</string>
+    <string name="unnamed_alarm_message">Alarm must have a name</string>
+    <!--Minesweeper setup-->
+    <string name="setup_title">Game Setup</string>
+    <string name="board_width_text">Board Width</string>
+    <string name="board_height_text">Board Height</string>
+    <!--Minesweeper-->
+    <string name="mine_text">Mines:</string>
+    <string name="time_text">Time:</string>
+    <string name="tile_description">Minesweeper Tile</string>
+    <string name="game_over_title">Game Over 😔</string>
+    <string name="game_over_message">Want to play again?</string>
+    <string name="win_title">Winner! 😎</string>
+    <string name="win_message">"You beat a size %1$d x %2$d board in %3$s seconds!"</string>
+    <string name="replay_text">Play Again</string>
+    <string name="return_text">Back</string>
+</resources>
