@@ -5,6 +5,8 @@
     <string name="no_alarms">No upcoming alarms</string>
     <string name="no_alarms_enabled">No alarms enabled</string>
     <string name="add_alarm_description">Create New Alarm</string>
+    <string name="add_alarm_button_text">+</string>
+    <string name="ellipses_button_text">…</string>
     <string name="alarm_list_description">Alarm List</string>
     <string name="alarm_delete_prompt_title">Delete Alarm</string>
     <string name="alarm_delete_prompt_message">Do you want to delete %1$s?</string>

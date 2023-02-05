@@ -13,7 +13,7 @@
         android:layout_height="wrap_content"
         android:hapticFeedbackEnabled="true"
         android:longClickable="false"
-        android:numbersBackgroundColor="#ff444444"
+        android:numbersBackgroundColor="@color/gray"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
@@ -43,7 +43,7 @@
         android:layout_marginTop="10dp"
         android:layout_marginEnd="20dp"
         android:text="@string/board_width_text"
-        android:textColor="@color/teal_700"
+        android:textColor="@color/white"
         android:textSize="30sp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.0"
@@ -70,7 +70,7 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:textAlignment="center"
-        android:textColor="@color/teal_700"
+        android:textColor="@color/white"
         android:textSize="25sp"
         app:layout_constraintBottom_toBottomOf="@+id/widthSliderAlarm"
         app:layout_constraintEnd_toEndOf="@+id/widthHeaderAlarm"
@@ -85,7 +85,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="10dp"
         android:text="@string/board_height_text"
-        android:textColor="@color/teal_700"
+        android:textColor="@color/white"
         android:textSize="30sp"
         app:layout_constraintEnd_toEndOf="@+id/widthHeaderAlarm"
         app:layout_constraintStart_toStartOf="@+id/widthHeaderAlarm"
@@ -112,7 +112,7 @@
         android:layout_height="wrap_content"
         android:layout_marginTop="5dp"
         android:textAlignment="center"
-        android:textColor="@color/teal_700"
+        android:textColor="@color/white"
         android:textSize="25sp"
         app:layout_constraintBottom_toBottomOf="@+id/heightSliderAlarm"
         app:layout_constraintEnd_toEndOf="@+id/heightHeaderAlarm"
@@ -144,6 +144,7 @@
             android:layout_weight="1"
             android:text="@string/cancel_button_text"
             android:textAllCaps="false"
+            android:textColor="@color/white"
             android:textSize="24sp" />
 
         <Button
@@ -154,6 +155,7 @@
             android:layout_weight="1"
             android:text="@string/save_button_text"
             android:textAllCaps="false"
+            android:textColor="@color/white"
             android:textSize="24sp" />
     </LinearLayout>
 

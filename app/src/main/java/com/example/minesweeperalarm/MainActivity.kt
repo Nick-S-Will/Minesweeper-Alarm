@@ -2,7 +2,7 @@ package com.example.minesweeperalarm
 
 import android.app.ActionBar.LayoutParams
 import android.app.AlertDialog
-import android.content.Intent
+import android.media.MediaPlayer
 import android.os.Bundle
 import android.view.View
 import android.widget.*
@@ -11,7 +11,6 @@ import androidx.appcompat.widget.SwitchCompat
 import androidx.cardview.widget.CardView
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.constraintlayout.widget.ConstraintSet
-import com.google.android.material.floatingactionbutton.FloatingActionButton
 import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
@@ -24,11 +23,14 @@ class MainActivity : AppCompatActivity() {
     private lateinit var nextAlarmRemainingTimeText: TextView
     private lateinit var nextAlarmDateText: TextView
     private lateinit var alarmParent: LinearLayout
+    private lateinit var alarmPlayer: MediaPlayer
 
     private val alarms: ArrayList<Alarm> = arrayListOf()
     private val getNewAlarmData = registerForActivityResult(AlarmSetup.AlarmContract(), ::addAlarm)
     private val editAlarmData = registerForActivityResult(AlarmSetup.AlarmContract(), ::editAlarm)
     private var editIndex = -1
+    private val playAlarmGame = registerForActivityResult(Minesweeper.AlarmGameContract(), ::dismissAlarm)
+    private var soundingAlarmData: AlarmSetup.AlarmData? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -37,16 +39,21 @@ class MainActivity : AppCompatActivity() {
         nextAlarmRemainingTimeText = findViewById(R.id.nextAlarmRemainingTimeText)
         nextAlarmDateText = findViewById(R.id.nextAlarmDateText)
         alarmParent = findViewById(R.id.alarmParent)
-
-        val addAlarmButton: FloatingActionButton = findViewById(R.id.addAlarmButton)
-        addAlarmButton.setOnClickListener { getNewAlarmData.launch(null) }
-
-        val setupGameButton: Button = findViewById(R.id.setupGameButton)
-        setupGameButton.setOnClickListener{ openMinesweeperSetup() }
+        alarmPlayer = MediaPlayer.create(this, R.raw.test_alarm)
+        alarmPlayer.isLooping = true
 
         val alarmData = loadAlarmData()
         if (alarmData != null) for (data in alarmData) createAlarmView(data)
         updateNextAlarmTexts()
+
+        val testButton: Button = findViewById(R.id.testButton)
+        testButton.setOnClickListener{ soundAlarm(alarms[0]) }
+
+        val addAlarmButton: Button = findViewById(R.id.addAlarmButton)
+        addAlarmButton.setOnClickListener{ getNewAlarmData.launch(null) }
+
+        val setupGameButton: Button = findViewById(R.id.setupGameButton)
+        setupGameButton.setOnClickListener{ MinesweeperSetup.open(this) }
     }
 
     //region Get time
@@ -135,7 +142,7 @@ class MainActivity : AppCompatActivity() {
         alarmCard.radius = resources.getDimension(R.dimen.alarm_card_radius)
         val padding = resources.getDimensionPixelSize(R.dimen.alarm_card_content_padding)
         alarmCard.setContentPadding(padding, padding, padding, padding)
-        alarmCard.setCardBackgroundColor(getColor(R.color.teal_200))
+        alarmCard.setCardBackgroundColor(getColor(R.color.dark_gray))
         alarmParent.addView(alarmCard)
 
         val space = Space(this)
@@ -151,14 +158,14 @@ class MainActivity : AppCompatActivity() {
         alarmNameText.id = View.generateViewId()
         constraintLayout.addView(alarmNameText)
         alarmNameText.layoutParams = ConstraintLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        alarmNameText.setTextColor(getColor(R.color.black))
+        alarmNameText.setTextColor(getColor(R.color.white))
         alarmNameText.textSize = resources.getDimension(R.dimen.alarm_name_text_size)
 
         val alarmTimeText = TextView(this)
         alarmTimeText.id = View.generateViewId()
         constraintLayout.addView(alarmTimeText)
         alarmTimeText.layoutParams = ConstraintLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        alarmTimeText.setTextColor(getColor(R.color.black))
+        alarmTimeText.setTextColor(getColor(R.color.white))
         alarmTimeText.textSize = resources.getDimension(R.dimen.alarm_time_text_size)
 
         val alarm = Alarm(alarmData, alarmNameText, alarmTimeText)
@@ -192,8 +199,8 @@ class MainActivity : AppCompatActivity() {
         if (newAlarm == null || alarms.any{ alarm -> newAlarm.alertTime == alarm.data.alertTime }) return
 
         createAlarmView(newAlarm)
-        updateNextAlarmTexts()
         saveAlarmData()
+        updateNextAlarmTexts()
     }
     //endregion
 
@@ -206,10 +213,11 @@ class MainActivity : AppCompatActivity() {
 
         builder.setPositiveButton(getString(R.string.alarm_delete_prompt_positive)) { _, _ ->
             alarms.remove(alarm)
+            saveAlarmData()
             alarmParent.removeView(alarmCard)
             alarmParent.removeView(space)
-            Toast.makeText(this, getString(R.string.alarm_delete_prompt_confirmed, alarm.data.name), Toast.LENGTH_SHORT).show()
             updateNextAlarmTexts()
+            Toast.makeText(this, getString(R.string.alarm_delete_prompt_confirmed, alarm.data.name), Toast.LENGTH_SHORT).show()
         }
 
         builder.setNeutralButton(getString(R.string.alarm_edit_prompt)) { _, _ ->
@@ -238,13 +246,9 @@ class MainActivity : AppCompatActivity() {
         val alarmDataArray = alarms.map { it.data }.toTypedArray()
         val jsonString = Json.encodeToString(alarmDataArray)
 
-        //try {
         val fileOutStream: FileOutputStream = openFileOutput(alarmDataArrayFileName, MODE_PRIVATE)
         fileOutStream.write(jsonString.toByteArray())
         fileOutStream.close()
-        //}
-        //catch (_: FileNotFoundException) { }
-        //catch (_: IOException) { }
     }
 
     private fun loadAlarmData() : Array<AlarmSetup.AlarmData>? {
@@ -265,9 +269,22 @@ class MainActivity : AppCompatActivity() {
     }
     //endregion
 
-    private fun openMinesweeperSetup() {
-        val intent = Intent(this, MinesweeperSetup::class.java)
-        startActivity(intent)
+    private fun soundAlarm(alarm: Alarm) {
+        alarmPlayer.start()
+
+        soundingAlarmData = alarm.data
+        playAlarmGame.launch(soundingAlarmData)
+    }
+
+    private fun dismissAlarm(isCompleted: Boolean) {
+        if (!isCompleted) {
+            playAlarmGame.launch(soundingAlarmData)
+            return
+        }
+
+        alarmPlayer.pause()
+        alarmPlayer.seekTo(0)
+        soundingAlarmData = null
     }
 
     data class Alarm(var data: AlarmSetup.AlarmData, val nameText: TextView, val timeText: TextView, var isEnabled: Boolean = true)

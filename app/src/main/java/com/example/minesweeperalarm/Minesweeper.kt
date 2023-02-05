@@ -1,6 +1,7 @@
 package com.example.minesweeperalarm
 
 import android.app.AlertDialog
+import android.content.Context
 import android.content.Intent
 import android.graphics.Point
 import android.graphics.drawable.Drawable
@@ -10,6 +11,7 @@ import android.widget.ImageButton
 import android.widget.LinearLayout
 import android.widget.TextView
 import android.widget.Toast
+import androidx.activity.result.contract.ActivityResultContract
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.plus
@@ -17,7 +19,20 @@ import kotlin.math.round
 
 class Minesweeper : AppCompatActivity() {
     companion object {
-        val spriteNames : Array<String> = arrayOf("empty", "one", "two", "three", "four", "five", "six", "seven", "eight", "plain", "flag", "mine")
+        private val spriteIDs : Array<Int> = arrayOf(R.drawable.empty, R.drawable.one, R.drawable.two, R.drawable.three, R.drawable.four, R.drawable.five, R.drawable.six, R.drawable.seven, R.drawable.eight, R.drawable.plain, R.drawable.flag, R.drawable.mine)
+        private const val boardWidthKey = "boardWidth"
+        private const val boardHeightKey = "boardHeight"
+        private const val isPracticeKey = "practiceKey"
+        private const val isCompleteKey = "completeKey"
+
+        fun open(sourceContext: Context, boardWidth: Int, boardHeight: Int, isPractice: Boolean) {
+            val intent = Intent(sourceContext, Minesweeper::class.java)
+            intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION
+            intent.putExtra(boardWidthKey, boardWidth)
+            intent.putExtra(boardHeightKey, boardHeight)
+            intent.putExtra(isPracticeKey, isPractice)
+            sourceContext.startActivity(intent)
+        }
     }
 
     private lateinit var tileSprites: Array<Drawable>
@@ -29,6 +44,7 @@ class Minesweeper : AppCompatActivity() {
     private var boardWidth = 0
     private var boardHeight = 0
     private var mineCount = 0
+    private var isPractice = true
 
     private val plainTileSprite: Drawable get() = tileSprites[9]
     private val flagTileSprite: Drawable get() = tileSprites[10]
@@ -38,15 +54,16 @@ class Minesweeper : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_minesweeper)
 
-        tileSprites = Array(spriteNames.size) { i -> getDrawable(spriteNames[i]) }
+        tileSprites = Array(spriteIDs.size) { i -> ResourcesCompat.getDrawable(resources, spriteIDs[i], null)!! }
         mineText = findViewById(R.id.mineText)
         timeText = findViewById(R.id.timeText)
         boardParent = findViewById(R.id.boardParentView)
 
         gameStopwatch = Stopwatch(30L, ::updateTimeText)
-        boardWidth = intent.extras!!.getInt(MinesweeperSetup.boardWidthKey)
-        boardHeight = intent.extras!!.getInt(MinesweeperSetup.boardHeightKey)
+        boardWidth = intent.extras!!.getInt(boardWidthKey)
+        boardHeight = intent.extras!!.getInt(boardHeightKey)
         mineCount = round(0.1f * boardWidth * boardHeight).toInt()
+        isPractice = intent.extras!!.getBoolean(isPracticeKey)
 
         updateMineText(0)
         updateTimeText()
@@ -57,11 +74,6 @@ class Minesweeper : AppCompatActivity() {
         board.winEvent += ::win
 
         gameStopwatch.start()
-    }
-
-    private fun getDrawable(name: String) : Drawable {
-        val id = resources.getIdentifier(name, "drawable", packageName)
-        return ResourcesCompat.getDrawable(resources, id, null)!!
     }
 
     private fun updateMineText(flaggedMineCount: Int) {
@@ -77,19 +89,27 @@ class Minesweeper : AppCompatActivity() {
 
     private fun gameOver() {
         gameStopwatch.stop()
-        promptGameEndOptions(getString(R.string.game_over_title), getString(R.string.game_over_message))
+
+        if (isPractice) promptGameEndOptions(getString(R.string.game_over_title), getString(R.string.game_over_message))
+        else finish()
     }
 
     private fun win() {
         gameStopwatch.stop()
-        promptGameEndOptions(getString(R.string.win_title), getString(R.string.win_message, boardWidth, boardHeight, gameStopwatch.getElapsedText()))
+
+        if (isPractice) promptGameEndOptions(getString(R.string.win_title), getString(R.string.win_message, boardWidth, boardHeight, gameStopwatch.getElapsedText()))
+        else {
+            setResult(RESULT_OK, Intent().putExtra(isCompleteKey, true))
+            finish()
+        }
     }
 
     private fun replay() {
         val intent = Intent(this, Minesweeper::class.java)
         intent.flags = Intent.FLAG_ACTIVITY_CLEAR_TASK or Intent.FLAG_ACTIVITY_NO_ANIMATION
-        intent.putExtra(MinesweeperSetup.boardWidthKey, boardWidth)
-        intent.putExtra(MinesweeperSetup.boardHeightKey, boardHeight)
+        intent.putExtra(boardWidthKey, boardWidth)
+        intent.putExtra(boardHeightKey, boardHeight)
+        intent.putExtra(isPracticeKey, isPractice)
         this.startActivity(intent)
 
         this.finish()
@@ -107,7 +127,6 @@ class Minesweeper : AppCompatActivity() {
         }
 
         builder.setNegativeButton(R.string.return_text) { _, _ ->
-            // Toast.makeText(this, R.string.return_text, Toast.LENGTH_SHORT).show()
             finish()
         }
 
@@ -271,6 +290,20 @@ class Minesweeper : AppCompatActivity() {
             }
         }
         //endregion
+    }
+
+    class AlarmGameContract : ActivityResultContract<AlarmSetup.AlarmData, Boolean>() {
+        override fun createIntent(context: Context, input: AlarmSetup.AlarmData): Intent {
+            val intent = Intent(context, Minesweeper::class.java)
+            intent.putExtra(boardWidthKey, input.boardWidth)
+            intent.putExtra(boardHeightKey, input.boardHeight)
+            intent.putExtra(isPracticeKey, false)
+            return intent
+        }
+
+        override fun parseResult(resultCode: Int, intent: Intent?) : Boolean {
+            return if (intent == null) false else intent.getBooleanExtra(isCompleteKey, false) ?: false
+        }
     }
 
     class Event<T> {
