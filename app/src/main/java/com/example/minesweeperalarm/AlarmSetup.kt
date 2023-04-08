@@ -33,8 +33,8 @@ class AlarmSetup : AppCompatActivity() {
         val saveButton: Button = findViewById(R.id.saveButton)
         saveButton.setOnClickListener { saveAlarm() }
 
-        val givenAlarm = intent.extras?.getSerializable(editAlarmKey)
-        if (givenAlarm != null && givenAlarm is AlarmData) {
+        val givenAlarm = intent.extras?.getSerializable(editAlarmKey) as AlarmData?
+        if (givenAlarm != null) {
             timePicker.hour = givenAlarm.alertTime.hour
             timePicker.minute = givenAlarm.alertTime.minute
             alarmNameInput.setText(givenAlarm.name)
@@ -56,9 +56,9 @@ class AlarmSetup : AppCompatActivity() {
         }
 
         val inputTime = AlarmTime(timePicker.hour, timePicker.minute)
-        val alarm = AlarmData(alarmName, inputTime, widthSlider.getValue(), heightSlider.getValue())
+        val alarmData = AlarmData(alarmName, inputTime, widthSlider.getValue(), heightSlider.getValue())
 
-        setResult(RESULT_OK, Intent().putExtra(editAlarmKey, alarm))
+        setResult(RESULT_OK, Intent().putExtra(editAlarmKey, alarmData))
         finish()
     }
 
@@ -69,7 +69,7 @@ class AlarmSetup : AppCompatActivity() {
     }
 
     @kotlinx.serialization.Serializable
-    data class AlarmData(var name: String, var alertTime: AlarmTime, var boardWidth: Int, var boardHeight: Int) : java.io.Serializable
+    data class AlarmData(var name: String, var alertTime: AlarmTime, var boardWidth: Int, var boardHeight: Int, var requestCode: Int = Int.MIN_VALUE) : java.io.Serializable
 
     class AlarmContract : ActivityResultContract<AlarmData?, AlarmData?>() {
         override fun createIntent(context: Context, input: AlarmData?): Intent {

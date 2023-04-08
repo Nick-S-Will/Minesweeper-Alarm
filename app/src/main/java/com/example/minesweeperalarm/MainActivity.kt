@@ -1,9 +1,16 @@
 package com.example.minesweeperalarm
 
 import android.app.ActionBar.LayoutParams
+import android.app.AlarmManager
 import android.app.AlertDialog
+import android.app.PendingIntent
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
 import android.media.MediaPlayer
 import android.os.Bundle
+import android.text.Html
+import android.text.Spanned
 import android.view.View
 import android.widget.*
 import androidx.appcompat.app.AppCompatActivity
@@ -16,9 +23,19 @@ import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.io.*
 import java.time.*
+import java.util.Calendar
+import java.util.Random
 
 class MainActivity : AppCompatActivity() {
-    private val alarmDataArrayFileName = "alarmDataArray.json"
+    companion object {
+        const val alarmDataArrayFileName = "alarmDataArray.json"
+
+        const val soundAlarmKey = "soundAlarm"
+
+        fun colorText(text: String, colorHex: String = "FFFFFF") : Spanned {
+            return Html.fromHtml("<font color='#${colorHex}'>${text}</font>")
+        }
+    }
 
     private lateinit var nextAlarmRemainingTimeText: TextView
     private lateinit var nextAlarmDateText: TextView
@@ -29,7 +46,7 @@ class MainActivity : AppCompatActivity() {
     private val getNewAlarmData = registerForActivityResult(AlarmSetup.AlarmContract(), ::addAlarm)
     private val editAlarmData = registerForActivityResult(AlarmSetup.AlarmContract(), ::editAlarm)
     private var editIndex = -1
-    private val playAlarmGame = registerForActivityResult(Minesweeper.AlarmGameContract(), ::dismissAlarm)
+    private val playAlarmGame = registerForActivityResult(Minesweeper.AlarmGameContract(), ::endAlarmGame)
     private var soundingAlarmData: AlarmSetup.AlarmData? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -42,18 +59,24 @@ class MainActivity : AppCompatActivity() {
         alarmPlayer = MediaPlayer.create(this, R.raw.test_alarm)
         alarmPlayer.isLooping = true
 
-        val alarmData = loadAlarmData()
-        if (alarmData != null) for (data in alarmData) createAlarmView(data)
+        val alarmDataArray = loadAlarmData()
+        if (alarmDataArray != null) for (data in alarmDataArray) createAlarmView(data)
         updateNextAlarmTexts()
 
         val testButton: Button = findViewById(R.id.testButton)
-        testButton.setOnClickListener{ soundAlarm(alarms[0]) }
+        testButton.setOnClickListener{ soundAlarm(alarms[0].data) }
 
         val addAlarmButton: Button = findViewById(R.id.addAlarmButton)
         addAlarmButton.setOnClickListener{ getNewAlarmData.launch(null) }
 
         val setupGameButton: Button = findViewById(R.id.setupGameButton)
         setupGameButton.setOnClickListener{ MinesweeperSetup.open(this) }
+
+        val alarmData = intent?.getSerializableExtra(soundAlarmKey) as AlarmSetup.AlarmData?
+        if (alarmData != null) {
+            scheduleAlarm(alarmData)
+            soundAlarm(alarmData)
+        }
     }
 
     //region Get time
@@ -196,9 +219,17 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun addAlarm(newAlarm: AlarmSetup.AlarmData?) {
-        if (newAlarm == null || alarms.any{ alarm -> newAlarm.alertTime == alarm.data.alertTime }) return
+        if (newAlarm == null) return
+
+        val requestCodes = Array(alarms.size) { i -> alarms[i].data.requestCode }
+        val rng = Random()
+        while (newAlarm.requestCode == Int.MIN_VALUE) {
+            val newCode = rng.nextInt()
+            if (newCode !in requestCodes) newAlarm.requestCode = newCode
+        }
 
         createAlarmView(newAlarm)
+        scheduleAlarm(newAlarm)
         saveAlarmData()
         updateNextAlarmTexts()
     }
@@ -211,7 +242,7 @@ class MainActivity : AppCompatActivity() {
         builder.setTitle(getString(R.string.alarm_delete_prompt_title))
         builder.setMessage(getString(R.string.alarm_delete_prompt_message, alarm.data.name))
 
-        builder.setPositiveButton(getString(R.string.alarm_delete_prompt_positive)) { _, _ ->
+        builder.setPositiveButton(colorText(getString(R.string.alarm_delete_prompt_positive))) { _, _ ->
             alarms.remove(alarm)
             saveAlarmData()
             alarmParent.removeView(alarmCard)
@@ -220,12 +251,12 @@ class MainActivity : AppCompatActivity() {
             Toast.makeText(this, getString(R.string.alarm_delete_prompt_confirmed, alarm.data.name), Toast.LENGTH_SHORT).show()
         }
 
-        builder.setNeutralButton(getString(R.string.alarm_edit_prompt)) { _, _ ->
+        builder.setNeutralButton(colorText(getString(R.string.alarm_edit_prompt))) { _, _ ->
             editIndex = alarms.indexOf(alarm)
             editAlarmData.launch(alarm.data)
         }
 
-        builder.setNegativeButton(R.string.return_text) { _, _ -> }
+        builder.setNegativeButton(colorText(getString(R.string.return_text))) { _, _ -> }
 
         builder.show()
         return true
@@ -234,10 +265,74 @@ class MainActivity : AppCompatActivity() {
     private fun editAlarm(alarmData: AlarmSetup.AlarmData?) {
         if (alarmData == null) return
 
+        cancelAlarm(alarmData)
+
+        alarmData.requestCode = alarms[editIndex].data.requestCode
         alarms[editIndex].data = alarmData
+
         updateAlarmView(alarms[editIndex])
-        editIndex = -1
+        scheduleAlarm(alarms[editIndex].data)
         saveAlarmData()
+        updateNextAlarmTexts()
+
+        editIndex = -1
+    }
+    //endregion
+
+    //region Sound Alarm
+    private fun soundAlarm(alarmData: AlarmSetup.AlarmData) {
+        alarmPlayer.start()
+
+        soundingAlarmData = alarmData
+        playAlarmGame.launch(alarmData)
+    }
+
+    private fun endAlarmGame(isCompleted: Boolean) {
+        if (!isCompleted) {
+            playAlarmGame.launch(soundingAlarmData)
+            return
+        }
+
+        alarmPlayer.pause()
+        alarmPlayer.seekTo(0)
+        soundingAlarmData = null
+    }
+    //endregion
+
+    //region Alarm scheduling
+    // Region based on https://www.youtube.com/watch?v=yrpimdBRk5Q
+    class AlarmReceiver : BroadcastReceiver() {
+        override fun onReceive(context: Context?, intent: Intent?) {
+            val alarmData = intent?.getSerializableExtra(soundAlarmKey) as AlarmSetup.AlarmData
+
+            val mainActivityIntent = Intent(context!!, MainActivity::class.java)
+            mainActivityIntent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+            mainActivityIntent.putExtra(soundAlarmKey, alarmData)
+            context.startActivity(mainActivityIntent)
+        }
+    }
+
+    private fun scheduleAlarm(alarmData: AlarmSetup.AlarmData) {
+        val intent = Intent(this, AlarmReceiver::class.java)
+        intent.putExtra(soundAlarmKey, alarmData)
+        val pendingIntent = PendingIntent.getBroadcast(this, alarmData.requestCode, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        val calendar = Calendar.getInstance()
+        calendar.set(Calendar.HOUR_OF_DAY, alarmData.alertTime.hour)
+        calendar.set(Calendar.MINUTE, alarmData.alertTime.minute)
+        calendar.set(Calendar.SECOND, 0)
+        if (calendar.before(Calendar.getInstance())) calendar.add(Calendar.DATE, 1)
+
+        val alarmManager = this.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.setExact(AlarmManager.RTC_WAKEUP, calendar.timeInMillis, pendingIntent)
+    }
+
+    private fun cancelAlarm(alarmData: AlarmSetup.AlarmData) {
+        val intent = Intent(this, AlarmReceiver::class.java)
+        val pendingIntent = PendingIntent.getBroadcast(this, alarmData.requestCode, intent, PendingIntent.FLAG_IMMUTABLE)
+
+        val alarmManager = this.getSystemService(Context.ALARM_SERVICE) as AlarmManager
+        alarmManager.cancel(pendingIntent)
     }
     //endregion
 
@@ -268,24 +363,6 @@ class MainActivity : AppCompatActivity() {
         return if (jsonString.isEmpty()) null else Json.decodeFromString(jsonString)
     }
     //endregion
-
-    private fun soundAlarm(alarm: Alarm) {
-        alarmPlayer.start()
-
-        soundingAlarmData = alarm.data
-        playAlarmGame.launch(soundingAlarmData)
-    }
-
-    private fun dismissAlarm(isCompleted: Boolean) {
-        if (!isCompleted) {
-            playAlarmGame.launch(soundingAlarmData)
-            return
-        }
-
-        alarmPlayer.pause()
-        alarmPlayer.seekTo(0)
-        soundingAlarmData = null
-    }
 
     data class Alarm(var data: AlarmSetup.AlarmData, val nameText: TextView, val timeText: TextView, var isEnabled: Boolean = true)
 }

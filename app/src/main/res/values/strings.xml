@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Minesweeper Alarm</string>
+    <string name="app_name">Alarm-Sweeper</string>
     <!--Main activity-->
     <string name="remaining_time_to_alarm">Alarm in %1$d hours %2$d minutes</string>
     <string name="no_alarms">No upcoming alarms</string>

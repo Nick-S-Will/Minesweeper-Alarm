@@ -116,17 +116,17 @@
         tools:text="10" />
 
     <Button
-        android:id="@+id/playButton"
-        android:layout_width="0dp"
-        android:layout_height="70dp"
-        android:layout_marginStart="5dp"
-        android:layout_marginEnd="5dp"
-        android:text="@string/play_text"
-        android:textColor="@color/black"
-        android:textSize="25sp"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        tools:ignore="TextContrastCheck" />
+            android:id="@+id/playButton"
+            android:layout_width="0dp"
+            android:layout_height="70dp"
+            android:layout_marginStart="5dp"
+            android:layout_marginEnd="5dp"
+            android:text="@string/play_text"
+            android:textColor="@color/white"
+            android:textSize="25sp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            tools:ignore="TextContrastCheck" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

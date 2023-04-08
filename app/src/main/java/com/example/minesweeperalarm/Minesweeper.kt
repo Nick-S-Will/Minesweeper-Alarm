@@ -121,12 +121,12 @@ class Minesweeper : AppCompatActivity() {
         builder.setTitle(title)
         builder.setMessage(message)
 
-        builder.setPositiveButton(R.string.replay_text) { _, _ ->
+        builder.setPositiveButton(MainActivity.colorText(getString(R.string.replay_text))) { _, _ ->
             Toast.makeText(this, R.string.replay_text, Toast.LENGTH_SHORT).show()
             replay()
         }
 
-        builder.setNegativeButton(R.string.return_text) { _, _ ->
+        builder.setNegativeButton(MainActivity.colorText(getString(R.string.return_text))) { _, _ ->
             finish()
         }
 
