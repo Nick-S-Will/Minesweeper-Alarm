@@ -69,7 +69,7 @@ class AlarmSetup : AppCompatActivity() {
     }
 
     @kotlinx.serialization.Serializable
-    data class AlarmData(var name: String, var alertTime: AlarmTime, var boardWidth: Int, var boardHeight: Int, var requestCode: Int = Int.MIN_VALUE) : java.io.Serializable
+    data class AlarmData(var name: String, var alertTime: AlarmTime, var boardWidth: Int, var boardHeight: Int, var requestCode: Int = Int.MIN_VALUE, var isEnabled: Boolean = true) : java.io.Serializable
 
     class AlarmContract : ActivityResultContract<AlarmData?, AlarmData?>() {
         override fun createIntent(context: Context, input: AlarmData?): Intent {

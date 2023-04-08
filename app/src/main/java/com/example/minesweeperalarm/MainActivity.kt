@@ -138,7 +138,7 @@ class MainActivity : AppCompatActivity() {
             nextAlarmRemainingTimeText.text = getString(R.string.no_alarms)
             nextAlarmDateText.text = ""
         }
-        else if (alarms.all { alarm -> !alarm.isEnabled }) {
+        else if (alarms.all { alarm -> !alarm.data.isEnabled }) {
             nextAlarmRemainingTimeText.text = getString(R.string.no_alarms_enabled)
             nextAlarmDateText.text = ""
         }
@@ -200,10 +200,15 @@ class MainActivity : AppCompatActivity() {
         enabledSwitch.id = View.generateViewId()
         constraintLayout.addView(enabledSwitch)
         enabledSwitch.layoutParams = ConstraintLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT)
-        enabledSwitch.isChecked = true
+        enabledSwitch.isChecked = alarmData.isEnabled
         enabledSwitch.setOnCheckedChangeListener{ _, checked ->
-            alarm.isEnabled = checked
+            alarm.data.isEnabled = checked
             updateNextAlarmTexts()
+
+            if (checked) scheduleAlarm(alarm.data)
+            else cancelAlarm(alarm.data)
+
+            saveAlarmData()
         }
 
         val constraintSet = ConstraintSet()
@@ -265,13 +270,17 @@ class MainActivity : AppCompatActivity() {
     private fun editAlarm(alarmData: AlarmSetup.AlarmData?) {
         if (alarmData == null) return
 
-        cancelAlarm(alarmData)
+        alarms[editIndex].data.name = alarmData.name
+        alarms[editIndex].data.alertTime = alarmData.alertTime
+        alarms[editIndex].data.boardWidth = alarmData.boardWidth
+        alarms[editIndex].data.boardHeight = alarmData.boardHeight
 
-        alarmData.requestCode = alarms[editIndex].data.requestCode
-        alarms[editIndex].data = alarmData
+        if (alarms[editIndex].data.isEnabled) {
+            cancelAlarm(alarmData)
+            scheduleAlarm(alarms[editIndex].data)
+        }
 
         updateAlarmView(alarms[editIndex])
-        scheduleAlarm(alarms[editIndex].data)
         saveAlarmData()
         updateNextAlarmTexts()
 
@@ -364,5 +373,5 @@ class MainActivity : AppCompatActivity() {
     }
     //endregion
 
-    data class Alarm(var data: AlarmSetup.AlarmData, val nameText: TextView, val timeText: TextView, var isEnabled: Boolean = true)
+    data class Alarm(var data: AlarmSetup.AlarmData, val nameText: TextView, val timeText: TextView)
 }
